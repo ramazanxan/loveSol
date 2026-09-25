@@ -21,8 +21,9 @@
   fieldset { border: 1px solid var(--line); border-radius: 16px; padding: 16px; margin: 0 0 16px; background: #fff; }
   legend { font-weight: 800; padding: 0 6px; }
   label { display: block; font-size: 13px; font-weight: 700; color: var(--muted); margin: 10px 0 4px; }
-  input, textarea { width: 100%; font: 16px "Nunito", sans-serif; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; color: var(--ink); background: #fff; }
-  input:focus, textarea:focus { outline: 2px solid #ffb3cb; border-color: transparent; }
+  [hidden] { display: none !important; }
+  input, textarea, select { width: 100%; font: 16px "Nunito", sans-serif; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; color: var(--ink); background: #fff; }
+  input:focus, textarea:focus, select:focus { outline: 2px solid #ffb3cb; border-color: transparent; }
   textarea { resize: vertical; min-height: 64px; }
   .two { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
   .btn { font: 800 15px "Nunito", sans-serif; border: 0; border-radius: 999px; padding: 12px 22px; cursor: pointer; background: var(--accent); color: #fff; }
@@ -67,22 +68,58 @@
         <legend>Тексты</legend>
         <label for="intro">Надпись на экране с цветами</label><input id="intro" name="intro">
         <label for="message">Сообщение перед вопросом (печатается по буквам)</label><textarea id="message" name="message"></textarea>
-        <label for="question">Главный вопрос</label><input id="question" name="question">
+        <label for="question">Главный вопрос</label><textarea id="question" name="question"></textarea>
         <label for="yesText">Текст после «Да»</label><input id="yesText" name="yesText">
       </fieldset>
 
       <fieldset>
-        <legend>Свидание</legend>
-        <div class="two">
-          <div><label for="date">Дата</label><input id="date" name="date" type="date"></div>
-          <div><label for="time">Время</label><input id="time" name="time" type="time"></div>
+        <legend>Дата и время</legend>
+        <label for="date">Дата</label><input id="date" name="date" type="date">
+        <label for="timeMode">Кто выбирает время</label>
+        <select id="timeMode" name="timeMode">
+          <option value="fixed">Я сам назначаю время</option>
+          <option value="her">Она выбирает удобное время</option>
+        </select>
+        <div data-show="timeMode=fixed">
+          <label for="time">Время</label><input id="time" name="time" type="time">
         </div>
-        <label for="place">Место (название)</label><input id="place" name="place" placeholder="Кафе «…», набережная, кино…">
-        <label for="address">Адрес</label><input id="address" name="address" placeholder="ул. …, д. …">
-        <p class="hint">По адресу автоматически сделается ссылка на Яндекс Карты.</p>
-        <label for="mapUrl">Своя ссылка на карту (необязательно)</label><input id="mapUrl" name="mapUrl" type="url" placeholder="https://…">
+        <div data-show="timeMode=her">
+          <p class="hint">Она увидит кнопки со временем в этом промежутке и сможет ввести своё.</p>
+          <div class="two">
+            <div><label for="timeFrom">С</label><input id="timeFrom" name="timeFrom" type="time"></div>
+            <div><label for="timeTo">До</label><input id="timeTo" name="timeTo" type="time"></div>
+          </div>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Место</legend>
+        <label for="placeMode">Как указать место</label>
+        <select id="placeMode" name="placeMode">
+          <option value="place">Конкретное место</option>
+          <option value="pickup">Я заберу её</option>
+          <option value="surprise">Сюрприз (не говорить)</option>
+        </select>
+        <div data-show="placeMode=place">
+          <label for="place">Название</label><input id="place" name="place" placeholder="Кафе «…», набережная, кино…">
+          <label for="address">Адрес</label><input id="address" name="address" placeholder="ул. …, д. …">
+          <p class="hint">По адресу автоматически сделается ссылка на Яндекс Карты.</p>
+          <label for="mapUrl">Своя ссылка на карту (необязательно)</label><input id="mapUrl" name="mapUrl" type="url" placeholder="https://…">
+        </div>
+        <div data-show="placeMode=pickup">
+          <label for="pickupText">Что написать</label><input id="pickupText" name="pickupText">
+        </div>
         <label for="dress">Дресс-код (необязательно)</label><input id="dress" name="dress" placeholder="Удобная обувь 😉">
         <label for="note">P.S. / записка (необязательно)</label><textarea id="note" name="note"></textarea>
+      </fieldset>
+
+      <fieldset>
+        <legend>Куда ей ответить</legend>
+        <p class="hint" style="margin-top:0">После «Да» у неё появится кнопка: откроется чат с тобой с готовым сообщением (дата, время). Особенно нужно, если время выбирает она.</p>
+        <div class="two">
+          <div><label for="tg">Твой Telegram (ник)</label><input id="tg" name="tg" placeholder="@username"></div>
+          <div><label for="wa">WhatsApp (номер)</label><input id="wa" name="wa" placeholder="+7…"></div>
+        </div>
       </fieldset>
     </form>
 
@@ -113,14 +150,23 @@
   // Поменяй PIN здесь. Это защита «от случайного захода»: сама страница ничего секретного не хранит.
   const PIN = "1402";
 
-  const FIELDS = ["to", "from", "intro", "message", "question", "yesText", "date", "time", "place", "address", "mapUrl", "dress", "note"];
+  const FIELDS = ["to", "from", "intro", "message", "question", "yesText", "date", "timeMode", "time", "timeFrom", "timeTo",
+    "placeMode", "place", "address", "mapUrl", "pickupText", "dress", "note", "tg", "wa"];
   const DEFAULTS = {
-    to: "Соледад", from: "", intro: "Это для тебя 💌",
-    message: "Я долго думал, как бы тебе это сказать…\nИ решил сказать красиво 🌸",
-    question: "Пойдёшь со мной на свидание?", yesText: "Я знал, что ты согласишься 💖",
-    date: "", time: "19:00", place: "", address: "", mapUrl: "", dress: "", note: ""
+    to: "Соледад", from: "", intro: "Это для вас 🌹",
+    message: "У меня есть к вам один вопрос…",
+    question: "Приглашаю вас на свидание.\nВы согласны?", yesText: "Я очень рад, что вы согласились 🌹",
+    date: "", timeMode: "fixed", time: "19:00", timeFrom: "12:00", timeTo: "21:00",
+    placeMode: "place", place: "", address: "", mapUrl: "", pickupText: "Я заберу вас 🚗",
+    dress: "", note: "", tg: "", wa: ""
   };
-  const KEY = "invite-admin-v1";
+  const KEY = "invite-admin-v2";
+  // fields that only matter in a given mode — left out of the link otherwise
+  const MODE_ONLY = {
+    time: ["timeMode", "fixed"], timeFrom: ["timeMode", "her"], timeTo: ["timeMode", "her"],
+    place: ["placeMode", "place"], address: ["placeMode", "place"], mapUrl: ["placeMode", "place"],
+    pickupText: ["placeMode", "pickup"],
+  };
   const $ = id => document.getElementById(id);
   const store = {
     get(k) { try { return localStorage.getItem(k); } catch { return null; } },
@@ -146,8 +192,24 @@
   }
   function collect() {
     const o = {};
-    FIELDS.forEach(k => { const v = $(k).value.trim(); if (v !== "") o[k] = v; });
+    FIELDS.forEach(k => {
+      const v = $(k).value.trim();
+      const only = MODE_ONLY[k];
+      if (only && $(only[0]).value !== only[1]) return;
+      if (v !== "") o[k] = v;
+    });
     return o;
+  }
+  function all() {
+    const o = {};
+    FIELDS.forEach(k => { o[k] = $(k).value; });
+    return o;
+  }
+  function applyModes() {
+    document.querySelectorAll("[data-show]").forEach(el => {
+      const [k, v] = el.dataset.show.split("=");
+      el.hidden = $(k).value !== v;
+    });
   }
   function defaultBase() {
     return location.href.split("#")[0].split("?")[0].replace(/admin\.html$/i, "index.html");
@@ -165,8 +227,9 @@
       $("date").value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
     }
     $("base").value = saved.__base || defaultBase();
+    applyModes();
 
-    $("f").addEventListener("input", () => { save(); $("status").textContent = ""; debounceRefresh(); });
+    $("f").addEventListener("input", () => { applyModes(); save(); $("status").textContent = ""; $("link").value = ""; debounceRefresh(); });
     $("base").addEventListener("input", save);
     $("gen").onclick = () => { $("link").value = makeLink(); $("status").textContent = "Ссылка готова — копируй и отправляй 💌"; };
     $("copy").onclick = async () => {
@@ -179,7 +242,7 @@
     $("refresh").onclick = refresh;
     refresh();
   }
-  function save() { store.set(KEY, JSON.stringify({ ...collect(), __base: $("base").value.trim() })); }
+  function save() { store.set(KEY, JSON.stringify({ ...all(), __base: $("base").value.trim() })); }
 
   let t;
   function debounceRefresh() { clearTimeout(t); t = setTimeout(refresh, 700); }
