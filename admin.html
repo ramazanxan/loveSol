@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Панель приглашения</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛠️</text></svg>">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+  :root { --ink:#3b2230; --muted:#8a5a6c; --accent:#ff4f8b; --line:#f3d3df; --bg:#fff6f9; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: "Nunito", system-ui, sans-serif; color: var(--ink); background: var(--bg); }
+  .lock { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 16px; }
+  .lock form { background: #fff; padding: 28px; border-radius: 20px; box-shadow: 0 10px 30px rgba(214,51,108,.12); width: 100%; max-width: 320px; text-align: center; }
+  .lock input { text-align: center; font-size: 22px; letter-spacing: .3em; }
+  .wrap { display: grid; grid-template-columns: minmax(0, 1fr) 400px; gap: 24px; max-width: 1180px; margin: 0 auto; padding: 24px 16px 60px; }
+  @media (max-width: 900px) { .wrap { grid-template-columns: 1fr; } .preview { display: none; } }
+  h1 { font-size: 24px; margin: 0 0 4px; }
+  .sub { color: var(--muted); margin: 0 0 20px; font-size: 14px; }
+  fieldset { border: 1px solid var(--line); border-radius: 16px; padding: 16px; margin: 0 0 16px; background: #fff; }
+  legend { font-weight: 800; padding: 0 6px; }
+  label { display: block; font-size: 13px; font-weight: 700; color: var(--muted); margin: 10px 0 4px; }
+  input, textarea { width: 100%; font: 16px "Nunito", sans-serif; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; color: var(--ink); background: #fff; }
+  input:focus, textarea:focus { outline: 2px solid #ffb3cb; border-color: transparent; }
+  textarea { resize: vertical; min-height: 64px; }
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .btn { font: 800 15px "Nunito", sans-serif; border: 0; border-radius: 999px; padding: 12px 22px; cursor: pointer; background: var(--accent); color: #fff; }
+  .btn.alt { background: #fff; color: var(--accent); border: 2px solid #ffc1d6; }
+  .bar { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
+  #link { font-size: 13px; font-family: ui-monospace, monospace; min-height: 90px; }
+  .ok { color: #1a8f4a; font-weight: 700; font-size: 14px; min-height: 20px; margin-top: 8px; }
+  .hint { font-size: 13px; color: var(--muted); margin: 6px 0 0; }
+  .preview { position: sticky; top: 16px; align-self: start; }
+  .phone { width: 100%; height: 760px; border: 10px solid #2b1a22; border-radius: 36px; overflow: hidden; background: #fff; }
+  .phone iframe { width: 100%; height: 100%; border: 0; }
+</style>
+</head>
+<body>
+
+<div class="lock" id="lock">
+  <form id="lockForm">
+    <div style="font-size:40px">🔒</div>
+    <h1>Только для автора</h1>
+    <label for="pin">PIN-код</label>
+    <input id="pin" type="password" inputmode="numeric" autocomplete="off" autofocus>
+    <div class="bar" style="justify-content:center"><button class="btn">Войти</button></div>
+    <div id="pinErr" class="hint" style="color:#d33"></div>
+  </form>
+</div>
+
+<div class="wrap" id="app" hidden>
+  <main>
+    <h1>💌 Настройка приглашения</h1>
+    <p class="sub">Заполни поля → «Создать ссылку» → отправь ей. Всё, что здесь написано, хранится внутри ссылки.</p>
+
+    <form id="f" autocomplete="off">
+      <fieldset>
+        <legend>Кто и кому</legend>
+        <div class="two">
+          <div><label for="to">Её имя</label><input id="to" name="to"></div>
+          <div><label for="from">Твоё имя (подпись)</label><input id="from" name="from"></div>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Тексты</legend>
+        <label for="intro">Надпись на экране с цветами</label><input id="intro" name="intro">
+        <label for="message">Сообщение перед вопросом (печатается по буквам)</label><textarea id="message" name="message"></textarea>
+        <label for="question">Главный вопрос</label><input id="question" name="question">
+        <label for="yesText">Текст после «Да»</label><input id="yesText" name="yesText">
+      </fieldset>
+
+      <fieldset>
+        <legend>Свидание</legend>
+        <div class="two">
+          <div><label for="date">Дата</label><input id="date" name="date" type="date"></div>
+          <div><label for="time">Время</label><input id="time" name="time" type="time"></div>
+        </div>
+        <label for="place">Место (название)</label><input id="place" name="place" placeholder="Кафе «…», набережная, кино…">
+        <label for="address">Адрес</label><input id="address" name="address" placeholder="ул. …, д. …">
+        <p class="hint">По адресу автоматически сделается ссылка на Яндекс Карты.</p>
+        <label for="mapUrl">Своя ссылка на карту (необязательно)</label><input id="mapUrl" name="mapUrl" type="url" placeholder="https://…">
+        <label for="dress">Дресс-код (необязательно)</label><input id="dress" name="dress" placeholder="Удобная обувь 😉">
+        <label for="note">P.S. / записка (необязательно)</label><textarea id="note" name="note"></textarea>
+      </fieldset>
+    </form>
+
+    <fieldset>
+      <legend>Ссылка для неё</legend>
+      <label for="base">Адрес сайта, где лежит index.html</label>
+      <input id="base" placeholder="https://…/index.html">
+      <p class="hint">Определяется сам. Поменяй, только если сайт выложен по другому адресу.</p>
+      <div class="bar">
+        <button class="btn" id="gen" type="button">✨ Создать ссылку</button>
+        <button class="btn alt" id="copy" type="button">Скопировать</button>
+        <button class="btn alt" id="open" type="button">Открыть как она</button>
+      </div>
+      <label for="link">Готовая ссылка</label>
+      <textarea id="link" readonly></textarea>
+      <div class="ok" id="status"></div>
+    </fieldset>
+  </main>
+
+  <aside class="preview">
+    <div class="bar" style="margin:0 0 10px"><button class="btn alt" id="refresh" type="button">↻ Обновить превью</button></div>
+    <div class="phone"><iframe id="frame" title="Превью"></iframe></div>
+  </aside>
+</div>
+
+<script>
+(() => {
+  // Поменяй PIN здесь. Это защита «от случайного захода»: сама страница ничего секретного не хранит.
+  const PIN = "1402";
+
+  const FIELDS = ["to", "from", "intro", "message", "question", "yesText", "date", "time", "place", "address", "mapUrl", "dress", "note"];
+  const DEFAULTS = {
+    to: "Соледад", from: "", intro: "Это для тебя 💌",
+    message: "Я долго думал, как бы тебе это сказать…\nИ решил сказать красиво 🌸",
+    question: "Пойдёшь со мной на свидание?", yesText: "Я знал, что ты согласишься 💖",
+    date: "", time: "19:00", place: "", address: "", mapUrl: "", dress: "", note: ""
+  };
+  const KEY = "invite-admin-v1";
+  const $ = id => document.getElementById(id);
+  const store = {
+    get(k) { try { return localStorage.getItem(k); } catch { return null; } },
+    set(k, v) { try { localStorage.setItem(k, v); } catch {} },
+  };
+
+  // ---- lock ----
+  function unlock() { $("lock").hidden = true; $("app").hidden = false; init(); }
+  try { if (sessionStorage.getItem("admin-ok") === "1") unlock(); } catch {}
+  $("lockForm").addEventListener("submit", e => {
+    e.preventDefault();
+    if ($("pin").value.trim() === PIN) {
+      try { sessionStorage.setItem("admin-ok", "1"); } catch {}
+      unlock();
+    } else { $("pinErr").textContent = "Неверный PIN"; $("pin").value = ""; }
+  });
+
+  // ---- encoding ----
+  function encode(obj) {
+    const bytes = new TextEncoder().encode(JSON.stringify(obj));
+    let bin = ""; bytes.forEach(b => bin += String.fromCharCode(b));
+    return btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  }
+  function collect() {
+    const o = {};
+    FIELDS.forEach(k => { const v = $(k).value.trim(); if (v !== "") o[k] = v; });
+    return o;
+  }
+  function defaultBase() {
+    return location.href.split("#")[0].split("?")[0].replace(/admin\.html$/i, "index.html");
+  }
+  function makeLink() { return ($("base").value.trim() || defaultBase()) + "#i=" + encode(collect()); }
+
+  let inited = false;
+  function init() {
+    if (inited) return; inited = true;
+    let saved = {};
+    try { saved = JSON.parse(store.get(KEY) || "{}"); } catch {}
+    FIELDS.forEach(k => { $(k).value = saved[k] ?? DEFAULTS[k]; });
+    if (!saved.date) {
+      const d = new Date(); d.setDate(d.getDate() + ((6 - d.getDay() + 7) % 7 || 7)); // ближайшая суббота
+      $("date").value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    }
+    $("base").value = saved.__base || defaultBase();
+
+    $("f").addEventListener("input", () => { save(); $("status").textContent = ""; debounceRefresh(); });
+    $("base").addEventListener("input", save);
+    $("gen").onclick = () => { $("link").value = makeLink(); $("status").textContent = "Ссылка готова — копируй и отправляй 💌"; };
+    $("copy").onclick = async () => {
+      if (!$("link").value) $("link").value = makeLink();
+      try { await navigator.clipboard.writeText($("link").value); }
+      catch { $("link").select(); document.execCommand("copy"); }
+      $("status").textContent = "Скопировано ✓";
+    };
+    $("open").onclick = () => window.open(makeLink(), "_blank");
+    $("refresh").onclick = refresh;
+    refresh();
+  }
+  function save() { store.set(KEY, JSON.stringify({ ...collect(), __base: $("base").value.trim() })); }
+
+  let t;
+  function debounceRefresh() { clearTimeout(t); t = setTimeout(refresh, 700); }
+  function refresh() {
+    // cache-bust so the iframe re-runs even when only the hash changes
+    const url = defaultBase() + "?p=" + Date.now() + "#i=" + encode(collect());
+    $("frame").src = url;
+  }
+})();
+</script>
+</body>
+</html>
