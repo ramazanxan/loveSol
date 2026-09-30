@@ -157,6 +157,14 @@
   .other input { font: 700 15px "Nunito", sans-serif; padding: 5px 8px; border: 1.5px solid #f5c3d4; border-radius: 10px; color: var(--ink); }
   .shake { animation: shake .45s; }
   @keyframes shake { 20%, 60% { transform: translateX(-6px); } 40%, 80% { transform: translateX(6px); } }
+  .field, .wish textarea {
+    width: 100%; margin-top: 8px; font: 600 15px "Nunito", sans-serif; color: var(--ink);
+    padding: 9px 12px; border: 1.5px solid #f5c3d4; border-radius: 12px; background: #fff;
+  }
+  .field:focus, .wish textarea:focus { outline: 2px solid #ffc1d6; border-color: transparent; }
+  .wish { margin-top: 16px; text-align: left; }
+  .wish label { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: #c07b95; font-weight: 800; }
+  .wish textarea { min-height: 70px; resize: vertical; }
   .reply { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 18px; }
   .reply a, .reply button {
     font: 800 15px "Nunito", sans-serif; color: #fff; text-decoration: none; cursor: pointer; border: 0;
@@ -245,6 +253,10 @@
       <h2 class="hand">Приглашаю вас на свидание</h2>
       <div id="rows"></div>
     </div>
+    <div class="wish" id="wishBox" hidden>
+      <label for="wish">Хотите что-то добавить?</label>
+      <textarea id="wish" placeholder="Пожелания, вопросы — что угодно"></textarea>
+    </div>
     <div class="reply" id="reply"></div>
     <div class="toast" id="toast"></div>
     <div class="countdown" id="countdown"></div>
@@ -268,11 +280,14 @@
     date: "",
     timeMode: "fixed",           // fixed | her
     time: "19:00", timeFrom: "12:00", timeTo: "21:00",
-    placeMode: "place",          // place | pickup | surprise
+    placeMode: "place",          // place | pickup | surprise | her
+    placeOptions: "",            // her: suggestions, one per line
+    allowComment: "yes",
     place: "", address: "", mapUrl: "",
     pickupText: "Я заберу вас",
     dress: "", note: "",
-    tg: "", wa: ""
+    tg: "", wa: "",
+    bot: "", chat: ""            // Telegram bot token + chat id: notifications to the author
   };
 
   function decode(str) {
@@ -294,6 +309,23 @@
     get(k) { try { return localStorage.getItem(k); } catch { return null; } },
     set(k, v) { try { localStorage.setItem(k, v); } catch {} },
   };
+
+  /* ---------- notifications to the author via his Telegram bot ---------- */
+  const isPreview = new URLSearchParams(location.search).has("p");   // admin's live preview
+  function notify(text) {
+    if (!cfg.bot || !cfg.chat || isPreview) return Promise.resolve(false);
+    return fetch(`https://api.telegram.org/bot${cfg.bot}/sendMessage`, {
+      method: "POST",
+      body: new URLSearchParams({ chat_id: cfg.chat, text }),
+      keepalive: true,
+    }).then(r => r.ok).catch(() => false);
+  }
+  try {
+    if (hashMatch && !sessionStorage.getItem("seen")) {
+      sessionStorage.setItem("seen", "1");
+      notify("👀 Она открыла приглашение");
+    }
+  } catch {}
 
   $("introText").textContent = cfg.intro;
   $("hello").textContent = cfg.to ? `Привет, ${cfg.to}!` : "Привет!";
@@ -580,6 +612,7 @@
     setTimeout(() => rain(small ? 30 : 60), 2500);
     buildInvite();
     setTimeout(() => $("invite").classList.add("show"), 1100);
+    notify(`💖 Она нажала «Да»!` + (dodges ? `\n(перед этим пыталась нажать «Нет» ${dodges} раз)` : ""));
   });
 
   function stars() {
@@ -678,6 +711,9 @@
   let chosenTime = cfg.timeMode === "her" ? "" : cfg.time;
   const timeKey = "invite-time-" + (hashMatch ? hashMatch[1].slice(-24) : "demo");
   if (cfg.timeMode === "her") chosenTime = store.get(timeKey) || "";
+  const placeKey = timeKey.replace("time", "place"), wishKey = timeKey.replace("time", "wish");
+  let chosenPlace = cfg.placeMode === "her" ? store.get(placeKey) || "" : "";
+  const placeOpts = (cfg.placeOptions || "").split("\n").map(x => x.trim()).filter(Boolean);
 
   function eventDate() {
     if (!cfg.date || !chosenTime) return null;
@@ -703,6 +739,7 @@
   function placeText() {
     if (cfg.placeMode === "pickup") return cfg.pickupText || "Я заберу вас";
     if (cfg.placeMode === "surprise") return "Это сюрприз";
+    if (cfg.placeMode === "her") return chosenPlace;
     return [cfg.place, cfg.address].filter(Boolean).join(", ");
   }
 
@@ -722,6 +759,11 @@
       rows.push([ICONS.car, "Место", esc(cfg.pickupText || "Я заберу вас")]);
     } else if (cfg.placeMode === "surprise") {
       rows.push([ICONS.star, "Место", "Это сюрприз"]);
+    } else if (cfg.placeMode === "her") {
+      const chips = placeOpts.map(o => `<button class="chip${o === chosenPlace ? " active" : ""}" data-p="${esc(o)}">${esc(o)}</button>`).join("");
+      const custom = placeOpts.includes(chosenPlace) ? "" : chosenPlace;
+      rows.push([ICONS.pin, "Место", `Куда бы вам хотелось?${chips ? `<div class="chips" id="placeChips">${chips}</div>` : ""}
+        <input class="field" id="customPlace" maxlength="120" placeholder="${chips ? "или напишите своё" : "Напишите место"}" value="${esc(custom)}">`]);
     } else if (cfg.place || cfg.address) {
       const map = cfg.mapUrl || (cfg.address ? "https://yandex.ru/maps/?text=" + encodeURIComponent(cfg.address) : "");
       let v = esc(cfg.place || "");
@@ -741,6 +783,19 @@
       });
       $("customTime").addEventListener("change", e => setTime(e.target.value));
     }
+    if (cfg.placeMode === "her") {
+      $("placeChips")?.addEventListener("click", e => {
+        const b = e.target.closest(".chip"); if (!b) return;
+        $("customPlace").value = "";
+        setPlace(b.dataset.p);
+      });
+      $("customPlace").addEventListener("input", e => setPlace(e.target.value.trim()));
+    }
+    if (cfg.allowComment === "yes") {
+      $("wishBox").hidden = false;
+      $("wish").value = store.get(wishKey) || "";
+      $("wish").addEventListener("input", e => store.set(wishKey, e.target.value));
+    }
     buildReply();
     refreshTime();
     setInterval(tick, 1000);
@@ -749,8 +804,16 @@
   function setTime(t) {
     chosenTime = t;
     store.set(timeKey, t);
-    document.querySelectorAll(".chip").forEach(c => c.classList.toggle("active", c.dataset.t === t));
+    document.querySelectorAll(".chip[data-t]").forEach(c => c.classList.toggle("active", c.dataset.t === t));
     const ct = $("customTime"); if (ct && ct.value !== t) ct.value = t;
+    $("toast").textContent = "";
+    refreshTime();
+  }
+
+  function setPlace(v) {
+    chosenPlace = v;
+    store.set(placeKey, v);
+    document.querySelectorAll(".chip[data-p]").forEach(c => c.classList.toggle("active", c.dataset.p === v));
     $("toast").textContent = "";
     refreshTime();
   }
@@ -760,7 +823,10 @@
     if (cfg.date) lines.push("📅 " + dateText());
     if (chosenTime) lines.push("⏰ " + chosenTime);
     if (cfg.placeMode === "pickup") lines.push("🚗 Жду, когда вы меня заберёте");
+    else if (cfg.placeMode === "her" && chosenPlace) lines.push("📍 " + chosenPlace);
     else if (cfg.placeMode === "place" && (cfg.place || cfg.address)) lines.push("📍 " + placeText());
+    const wish = cfg.allowComment === "yes" ? $("wish").value.trim() : "";
+    if (wish) lines.push("💬 " + wish);
     return lines.join("\n");
   }
 
@@ -768,21 +834,38 @@
     const box = $("reply");
     const tg = (cfg.tg || "").replace(/^@/, "").replace(/^https?:\/\/t\.me\//, "").trim();
     const wa = (cfg.wa || "").replace(/\D/g, "");
+    const asks = cfg.timeMode === "her" || cfg.placeMode === "her" || cfg.allowComment === "yes";
     let html = "";
-    if (tg) html += `<a class="tg" data-kind="tg" target="_blank" rel="noopener">Ответить в Telegram</a>`;
-    if (wa) html += `<a class="wa" data-kind="wa" target="_blank" rel="noopener">Ответить в WhatsApp</a>`;
-    if (!html && cfg.timeMode === "her") html = `<button data-kind="share">Отправить ответ</button>`;
+    if (cfg.bot && cfg.chat) html = `<button data-kind="bot">Отправить ответ</button>`;   // straight to the author
+    else {
+      if (tg) html += `<a class="tg" data-kind="tg" target="_blank" rel="noopener">Ответить в Telegram</a>`;
+      if (wa) html += `<a class="wa" data-kind="wa" target="_blank" rel="noopener">Ответить в WhatsApp</a>`;
+      if (!html && asks) html = `<button data-kind="share">Отправить ответ</button>`;
+    }
     box.innerHTML = html;
+    const nudge = (el, msg) => {
+      $("toast").textContent = msg;
+      if (!el) return;
+      el.classList.remove("shake"); void el.offsetWidth; el.classList.add("shake");
+    };
     box.addEventListener("click", async e => {
       const el = e.target.closest("[data-kind]"); if (!el) return;
       if (cfg.timeMode === "her" && !chosenTime) {
         e.preventDefault();
-        $("toast").textContent = "Сначала выберите время";
-        const c = $("chips"); c.classList.remove("shake"); void c.offsetWidth; c.classList.add("shake");
-        return;
+        return nudge($("chips"), "Сначала выберите время");
+      }
+      if (cfg.placeMode === "her" && !chosenPlace) {
+        e.preventDefault();
+        return nudge($("placeChips") || $("customPlace"), "Выберите или напишите место");
       }
       const text = encodeURIComponent(replyText());
-      if (el.dataset.kind === "tg") el.href = `https://t.me/${tg}?text=${text}`;
+      if (el.dataset.kind === "bot") {
+        el.disabled = true;
+        const ok = await notify("📨 Её ответ:\n" + replyText());
+        el.disabled = false;
+        $("toast").textContent = ok ? "Ответ отправлен ✓ Если передумаете — поменяйте и отправьте ещё раз" : "Не получилось отправить, попробуйте ещё раз";
+      }
+      else if (el.dataset.kind === "tg") el.href = `https://t.me/${tg}?text=${text}`;
       else if (el.dataset.kind === "wa") el.href = `https://wa.me/${wa}?text=${text}`;
       else {
         try {

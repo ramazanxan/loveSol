@@ -32,6 +32,7 @@
   #link { font-size: 13px; font-family: ui-monospace, monospace; min-height: 90px; }
   .ok { color: #1a8f4a; font-weight: 700; font-size: 14px; min-height: 20px; margin-top: 8px; }
   .hint { font-size: 13px; color: var(--muted); margin: 6px 0 0; }
+  .steps { padding-left: 20px; line-height: 1.6; }
   .preview { position: sticky; top: 16px; align-self: start; }
   .phone { width: 100%; height: 760px; border: 10px solid #2b1a22; border-radius: 36px; overflow: hidden; background: #fff; }
   .phone iframe { width: 100%; height: 100%; border: 0; }
@@ -99,6 +100,7 @@
           <option value="place">Конкретное место</option>
           <option value="pickup">Я заберу её</option>
           <option value="surprise">Сюрприз (не говорить)</option>
+          <option value="her">Она выбирает место</option>
         </select>
         <div data-show="placeMode=place">
           <label for="place">Название</label><input id="place" name="place" placeholder="Кафе «…», набережная, кино…">
@@ -109,13 +111,45 @@
         <div data-show="placeMode=pickup">
           <label for="pickupText">Что написать</label><input id="pickupText" name="pickupText">
         </div>
+        <div data-show="placeMode=her">
+          <label for="placeOptions">Варианты на выбор (каждый с новой строки, можно оставить пустым)</label>
+          <textarea id="placeOptions" name="placeOptions" placeholder="Кафе на набережной&#10;Кино&#10;Прогулка в парке"></textarea>
+          <p class="hint">Она выберет один из вариантов или напишет своё.</p>
+        </div>
         <label for="dress">Дресс-код (необязательно)</label><input id="dress" name="dress" placeholder="Удобная обувь 😉">
         <label for="note">P.S. / записка (необязательно)</label><textarea id="note" name="note"></textarea>
       </fieldset>
 
       <fieldset>
-        <legend>Куда ей ответить</legend>
-        <p class="hint" style="margin-top:0">После «Да» у неё появится кнопка: откроется чат с тобой с готовым сообщением (дата, время). Особенно нужно, если время выбирает она.</p>
+        <legend>Её комментарий</legend>
+        <label for="allowComment">Поле «Хотите что-то добавить?»</label>
+        <select id="allowComment" name="allowComment">
+          <option value="yes">Показывать</option>
+          <option value="no">Не показывать</option>
+        </select>
+      </fieldset>
+
+      <fieldset>
+        <legend>🔔 Уведомления мне в Telegram</legend>
+        <p class="hint" style="margin-top:0">Тебе будут приходить сообщения: она открыла приглашение, нажала «Да»
+          (и сколько раз пыталась нажать «Нет»), её ответ — время, место, комментарий.</p>
+        <ol class="hint steps">
+          <li>В Telegram открой <b>@BotFather</b> → <b>/newbot</b> → придумай имя. Он пришлёт токен.</li>
+          <li>Открой своего нового бота и напиши ему любое сообщение (например «привет»).</li>
+          <li>Вставь токен ниже и нажми «Найти мой chat id», потом «Проверить».</li>
+        </ol>
+        <label for="bot">Токен бота</label><input id="bot" name="bot" placeholder="123456789:AA…" autocomplete="off" spellcheck="false">
+        <label for="chat">Chat id</label><input id="chat" name="chat" placeholder="заполнится сам" autocomplete="off">
+        <div class="bar">
+          <button class="btn alt" id="findChat" type="button">Найти мой chat id</button>
+          <button class="btn alt" id="testBot" type="button">Проверить</button>
+        </div>
+        <div class="ok" id="botStatus"></div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Если без бота</legend>
+        <p class="hint" style="margin-top:0">Без бота у неё будет кнопка, которая откроет чат с тобой с готовым сообщением — но отправить его она должна сама.</p>
         <div class="two">
           <div><label for="tg">Твой Telegram (ник)</label><input id="tg" name="tg" placeholder="@username"></div>
           <div><label for="wa">WhatsApp (номер)</label><input id="wa" name="wa" placeholder="+7…"></div>
@@ -151,21 +185,22 @@
   const PIN = "1402";
 
   const FIELDS = ["to", "from", "intro", "message", "question", "yesText", "date", "timeMode", "time", "timeFrom", "timeTo",
-    "placeMode", "place", "address", "mapUrl", "pickupText", "dress", "note", "tg", "wa"];
+    "placeMode", "place", "address", "mapUrl", "pickupText", "placeOptions", "allowComment", "dress", "note", "tg", "wa", "bot", "chat"];
   const DEFAULTS = {
     to: "Соледад", from: "", intro: "Это для вас",
     message: "У меня есть к вам один вопрос…",
     question: "Приглашаю вас на свидание.\nВы согласны?", yesText: "Я очень рад, что вы согласились",
     date: "", timeMode: "fixed", time: "19:00", timeFrom: "12:00", timeTo: "21:00",
     placeMode: "place", place: "", address: "", mapUrl: "", pickupText: "Я заберу вас",
-    dress: "", note: "", tg: "", wa: ""
+    placeOptions: "", allowComment: "yes",
+    dress: "", note: "", tg: "", wa: "", bot: "", chat: ""
   };
   const KEY = "invite-admin-v2";
   // fields that only matter in a given mode — left out of the link otherwise
   const MODE_ONLY = {
     time: ["timeMode", "fixed"], timeFrom: ["timeMode", "her"], timeTo: ["timeMode", "her"],
     place: ["placeMode", "place"], address: ["placeMode", "place"], mapUrl: ["placeMode", "place"],
-    pickupText: ["placeMode", "pickup"],
+    pickupText: ["placeMode", "pickup"], placeOptions: ["placeMode", "her"],
   };
   const $ = id => document.getElementById(id);
   const store = {
@@ -239,9 +274,36 @@
       $("status").textContent = "Скопировано ✓";
     };
     $("open").onclick = () => window.open(makeLink(), "_blank");
+    $("findChat").onclick = findChat;
+    $("testBot").onclick = testBot;
     $("refresh").onclick = refresh;
     refresh();
   }
+  // ---- Telegram bot helpers ----
+  const botStatus = t => { $("botStatus").textContent = t; };
+  const api = (method, params) => fetch(`https://api.telegram.org/bot${$("bot").value.trim()}/${method}`,
+    { method: "POST", body: new URLSearchParams(params || {}) }).then(r => r.json());
+  async function findChat() {
+    if (!$("bot").value.trim()) return botStatus("Сначала вставь токен бота");
+    botStatus("Ищу…");
+    try {
+      const r = await api("getUpdates");
+      if (!r.ok) return botStatus("Токен не подошёл: " + (r.description || "ошибка"));
+      const msg = [...r.result].reverse().map(u => u.message || u.edited_message).find(Boolean);
+      if (!msg) return botStatus("Напиши своему боту любое сообщение в Telegram и нажми ещё раз");
+      $("chat").value = msg.chat.id;
+      save();
+      botStatus(`Нашёл: ${msg.chat.first_name || ""} (${msg.chat.id}) ✓ Теперь нажми «Проверить»`);
+    } catch { botStatus("Нет связи с Telegram, попробуй ещё раз"); }
+  }
+  async function testBot() {
+    if (!$("bot").value.trim() || !$("chat").value.trim()) return botStatus("Нужны токен и chat id");
+    try {
+      const r = await api("sendMessage", { chat_id: $("chat").value.trim(), text: "✅ Уведомления о приглашении работают" });
+      botStatus(r.ok ? "Отправил тестовое сообщение — проверь Telegram ✓" : "Не получилось: " + (r.description || "ошибка"));
+    } catch { botStatus("Нет связи с Telegram, попробуй ещё раз"); }
+  }
+
   function save() { store.set(KEY, JSON.stringify({ ...all(), __base: $("base").value.trim() })); }
 
   let t;
