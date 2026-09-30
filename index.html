@@ -19,7 +19,7 @@
     --muted: #8a5a6c;
     --accent: #e0356f;
     --accent-2: #ff8fb3;
-    --card: rgba(255, 255, 255, .9);
+    --card: #fffafc;
     --shadow: 0 20px 50px rgba(214, 51, 108, .18);
   }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -67,9 +67,7 @@
   @keyframes pulse { 50% { opacity: .45; } }
 
   .petal {
-    position: fixed; z-index: 60; pointer-events: none;
-    width: 14px; height: 18px; border-radius: 150% 0 150% 0;
-    background: linear-gradient(135deg, #ffd0de, #e2578a);
+    position: fixed; z-index: 60; pointer-events: none; height: auto;
     transition: transform var(--t, 4s) cubic-bezier(.25, .1, .3, 1), opacity var(--t, 4s) ease-in;
   }
 
@@ -103,7 +101,8 @@
   .screen.show .card { transform: none; }
 
   /* ---------- Screen 2: question ---------- */
-  #face { font-size: 70px; line-height: 1; display: inline-block; animation: bob 2.6s ease-in-out infinite; }
+  #face { display: inline-block; animation: bob 2.6s ease-in-out infinite; transform-origin: 50% 90%; }
+  #face img { width: 78px; height: auto; display: block; }
   @keyframes bob { 50% { transform: translateY(-8px) rotate(-5deg); } }
   .hello { font-size: 32px; margin: 12px 0 4px; color: var(--accent); }
   .msg { font-size: 16px; line-height: 1.5; color: var(--muted); margin: 0 0 16px; white-space: pre-line; min-height: 1.5em; }
@@ -142,7 +141,9 @@
   .row { display: flex; gap: 12px; align-items: flex-start; padding: 10px 0; border-bottom: 1px solid #fde3ec; }
   .row:last-child { border-bottom: 0; }
   .row > div:last-child { flex: 1; min-width: 0; }
-  .row .ico { font-size: 22px; width: 30px; text-align: center; flex: none; }
+  .row .ico { width: 30px; flex: none; padding-top: 3px; display: flex; justify-content: center; }
+  .ico svg, .ghost svg { width: 22px; height: 22px; fill: none; stroke: var(--accent); stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  .ghost svg { width: 18px; height: 18px; vertical-align: -4px; margin-right: 4px; }
   .row .lbl { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: #c07b95; font-weight: 800; }
   .row .val { font-size: 17px; font-weight: 600; word-break: break-word; }
   .row .val a { color: var(--accent); text-decoration: none; border-bottom: 1px dashed currentColor; }
@@ -175,15 +176,35 @@
   .sign { margin-top: 16px; font-size: 26px; color: var(--muted); }
 
   /* ---------- falling flowers ---------- */
+  /* each falling thing = drop (down) > sway (side to side) > img (spin / flip in 3D) */
   .fall {
-    position: fixed; top: -40px; z-index: 40; pointer-events: none;
-    animation: fall linear forwards;
+    position: fixed; top: -80px; z-index: 40; pointer-events: none;
+    animation: fdrop var(--dur, 7s) linear var(--delay, 0s) both;
   }
-  @keyframes fall {
-    to { transform: translate(var(--dx, 0), 110vh) rotate(var(--r, 360deg)); opacity: .9; }
+  @keyframes fdrop {
+    0%   { transform: translateY(0); opacity: 0; }
+    6%   { opacity: 1; }
+    88%  { opacity: 1; }
+    100% { transform: translateY(calc(100vh + 160px)); opacity: 0; }
   }
+  .fall .sw { animation: fsway var(--swd, 3s) ease-in-out var(--swdl, 0s) infinite alternate; }
+  @keyframes fsway {
+    from { transform: translateX(calc(var(--amp, 30px) * -1)) rotate(calc(var(--tilt, 20deg) * -1)); }
+    to   { transform: translateX(var(--amp, 30px)) rotate(var(--tilt, 20deg)); }
+  }
+  .fall img { display: block; width: var(--w, 20px); height: auto; animation: fspin var(--spd, 6s) linear infinite; }
+  .fall.flip img { animation-name: fflip; }
+  .fall.soft img { animation: fpulse 1.6s ease-in-out infinite alternate; }
+  .fall.twinkle img { animation: ftwinkle 1.2s ease-in-out infinite alternate; }
+  @keyframes fspin { to { transform: rotate(360deg); } }
+  @keyframes fflip {
+    from { transform: rotate3d(var(--ax, .6), 1, .2, 0deg); }
+    to   { transform: rotate3d(var(--ax, .6), 1, .2, 360deg); }
+  }
+  @keyframes fpulse { from { transform: scale(.92); } to { transform: scale(1.08); } }
+  @keyframes ftwinkle { from { transform: scale(.6) rotate(0deg); opacity: .6; } to { transform: scale(1.1) rotate(45deg); opacity: 1; } }
   @media (prefers-reduced-motion: reduce) {
-    .bush img, #face { animation: none; }
+    .bush img, #face, .fall .sw, .fall img { animation: none !important; }
   }
 </style>
 </head>
@@ -195,7 +216,7 @@
 <!-- Screen 1 -->
 <div id="roses" role="button" aria-label="Нажмите на цветы">
   <div id="tapHint">
-    <div class="big hand" id="introText">Это для вас 🌹</div>
+    <div class="big hand" id="introText">Это для вас</div>
     <div class="small">нажмите на цветы</div>
   </div>
 </div>
@@ -203,7 +224,7 @@
 <!-- Screen 2 -->
 <section class="screen" id="ask">
   <div class="card">
-    <div id="face">🌹</div>
+    <div id="face"></div>
     <div class="hello hand" id="hello">Привет!</div>
     <p class="msg" id="msg"></p>
     <div class="question hand" id="question"></div>
@@ -218,7 +239,7 @@
 <!-- Screen 3 -->
 <section class="screen" id="invite">
   <div class="card">
-    <p class="yay hand">Сюрприз! 🎉</p>
+    <p class="yay hand">Сюрприз!</p>
     <p class="yay-sub" id="yaySub"></p>
     <div class="ticket">
       <h2 class="hand">Приглашаю вас на свидание</h2>
@@ -228,7 +249,7 @@
     <div class="toast" id="toast"></div>
     <div class="countdown" id="countdown"></div>
     <div class="actions">
-      <a class="ghost" id="calBtn" target="_blank" rel="noopener">📅 В календарь</a>
+      <a class="ghost" id="calBtn" target="_blank" rel="noopener"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>В календарь</a>
     </div>
     <div class="sign hand" id="sign"></div>
   </div>
@@ -240,16 +261,16 @@
   const DEFAULTS = {
     to: "Соледад",
     from: "",
-    intro: "Это для вас 🌹",
+    intro: "Это для вас",
     message: "У меня есть к вам один вопрос…",
     question: "Приглашаю вас на свидание.\nВы согласны?",
-    yesText: "Я очень рад, что вы согласились 🌹",
+    yesText: "Я очень рад, что вы согласились",
     date: "",
     timeMode: "fixed",           // fixed | her
     time: "19:00", timeFrom: "12:00", timeTo: "21:00",
     placeMode: "place",          // place | pickup | surprise
     place: "", address: "", mapUrl: "",
-    pickupText: "Я заберу вас 🚗",
+    pickupText: "Я заберу вас",
     dress: "", note: "",
     tg: "", wa: ""
   };
@@ -343,8 +364,44 @@
     return s + `</g></svg>`;
   }
   // a handful of bushes rendered once as images — moving <img>s is far cheaper on phones than live SVG
-  const BUSH_IMGS = Array.from({ length: 14 }, () =>
-    URL.createObjectURL(new Blob([bushSVG()], { type: "image/svg+xml" })));
+  const svgURL = svg => URL.createObjectURL(new Blob([svg], { type: "image/svg+xml" }));
+  const BUSH_IMGS = Array.from({ length: 14 }, () => svgURL(bushSVG()));
+
+  /* ---------- drawn falling things (no emoji) ---------- */
+  const XMLNS = `xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"`;
+  const PETAL_IMGS = Object.values(ROSES).map(([d, m, l]) => svgURL(
+    `<svg ${XMLNS} viewBox="0 0 60 80"><defs><linearGradient id="p" x1="0" y1="0" x2=".3" y2="1">
+      <stop offset="0" stop-color="${l}"/><stop offset=".7" stop-color="${m}"/><stop offset="1" stop-color="${d}"/></linearGradient></defs>
+      <path d="M30 78C8 60 2 34 12 14C18 4 26 2 30 8C34 2 42 4 48 14C58 34 52 60 30 78Z" fill="url(#p)"/>
+      <path d="M30 72C25 56 23 36 28 16" stroke="${l}" stroke-opacity=".55" stroke-width="1.5" fill="none"/></svg>`));
+  const HEART_IMGS = [["#ffb3cb", "#f0457f", "#a8103f"], ["#ffd0de", "#ff7aa2", "#d6336c"], ["#ff9a9a", "#e0303f", "#8e0c1e"]]
+    .map(([l, m, d]) => svgURL(
+    `<svg ${XMLNS} viewBox="0 0 100 90"><defs><radialGradient id="h" cx="35%" cy="30%" r="85%">
+      <stop offset="0" stop-color="${l}"/><stop offset=".55" stop-color="${m}"/><stop offset="1" stop-color="${d}"/></radialGradient></defs>
+      <path d="M50 86C20 64 2 46 2 26C2 12 13 2 27 2C37 2 45 8 50 16C55 8 63 2 73 2C87 2 98 12 98 26C98 46 80 64 50 86Z" fill="url(#h)"/>
+      <ellipse cx="28" cy="24" rx="11" ry="6" fill="#fff" opacity=".5" transform="rotate(-35 28 24)"/></svg>`));
+  const ROSE_IMGS = ROSE_KEYS.map(k => svgURL(`<svg ${XMLNS} viewBox="0 0 100 100">${DEFS}<use xlink:href="#rose-${k}" width="100" height="100"/></svg>`));
+  const SPARK_IMGS = [["#fff8dc", "#ffd166"], ["#ffffff", "#ffc2d6"]].map(([l, m]) => svgURL(
+    `<svg ${XMLNS} viewBox="0 0 100 100"><defs><radialGradient id="s"><stop offset="0" stop-color="${l}"/><stop offset="1" stop-color="${m}"/></radialGradient></defs>
+      <path d="M50 0C54 38 62 46 100 50C62 54 54 62 50 100C46 62 38 54 0 50C38 46 46 38 50 0Z" fill="url(#s)"/></svg>`));
+  const FACE_IMG = svgURL(
+    `<svg ${XMLNS} viewBox="0 0 120 170">${DEFS}
+      <path d="M60 80C57 105 64 135 59 168" stroke="#3f7a45" stroke-width="4" fill="none" stroke-linecap="round"/>
+      <use xlink:href="#leaf" x="60" y="104" width="48" height="24" transform="rotate(-28 60 116)"/>
+      <use xlink:href="#leaf" x="12" y="124" width="48" height="24" transform="rotate(208 60 136)"/>
+      <use xlink:href="#rose-rasp" x="12" y="0" width="96" height="96"/></svg>`);
+  $("face").innerHTML = `<img src="${FACE_IMG}" alt="">`;
+
+  const ICON = d => `<svg viewBox="0 0 24 24">${d}</svg>`;
+  const ICONS = {
+    date: ICON('<rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/>'),
+    time: ICON('<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>'),
+    pin: ICON('<path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/>'),
+    car: ICON('<path d="M3 16v-3l2.2-5h13.6l2.2 5v3z"/><circle cx="7.5" cy="16.5" r="2"/><circle cx="16.5" cy="16.5" r="2"/>'),
+    star: ICON('<path d="M12 3c.6 5 2 7 9 9-7 2-8.4 4-9 9-.6-5-2-7-9-9 7-2 8.4-4 9-9z"/>'),
+    dress: ICON('<path d="M12 7a2 2 0 1 1 2-2M12 7v2L3 17h18l-9-8"/>'),
+    note: ICON('<path d="M4 5h16v11H9l-5 4z"/>'),
+  };
 
   /* ---------- Screen 1: build the wall ---------- */
   const wall = $("roses");
@@ -417,15 +474,16 @@
 
   function petals(ox, oy, n) {
     for (let i = 0; i < n; i++) {
-      const p = document.createElement("div");
+      const p = new Image();
+      p.src = pick(PETAL_IMGS); p.alt = "";
       p.className = "petal";
+      p.style.width = rnd(12, 22) + "px";
       p.style.left = ox + "px"; p.style.top = oy + "px";
       p.style.setProperty("--t", rnd(3.5, 5.5) + "s");
-      if (Math.random() < 0.3) p.style.background = "linear-gradient(135deg,#fff,#f5c6d6)";
       document.body.appendChild(p);
       const a = rnd(0, Math.PI * 2), d = rnd(120, Math.max(innerWidth, innerHeight) * 0.7);
       requestAnimationFrame(() => requestAnimationFrame(() => {
-        p.style.transform = `translate(${Math.cos(a) * d}px, ${Math.sin(a) * d + rnd(80, 240)}px) rotate(${rnd(-540, 540)}deg)`;
+        p.style.transform = `translate(${Math.cos(a) * d}px, ${Math.sin(a) * d + rnd(80, 240)}px) rotate3d(${rnd(0, 1).toFixed(2)}, 1, .3, ${rnd(360, 900).toFixed(0)}deg)`;
         p.style.opacity = 0;
       }));
       setTimeout(() => p.remove(), 6000);
@@ -445,8 +503,8 @@
   /* ---------- Screen 2: "No" hops right, left, up, down… ---------- */
   const noBtn = $("noBtn"), yesBtn = $("yesBtn");
   const DIRS = [[1, 0], [-1, 0], [-1, 0], [0, -1], [0, 1], [0, 1], [0, 1], [1, 0], [1, 0], [0, -1], [-1, 0], [0, 1]];
-  const NO_TEXTS = ["Нет", "Нет", "Нет", "Не-а 😌", "Мимо", "Нет", "Почти!", "Нет", "Хм…"];
-  const TEASES = ["", "", "Кнопка «Нет» сегодня не работает 😌", "", "Ой, мимо", "", "Она у нас стеснительная", "", "Может, просто «Да»? 🌹"];
+  const NO_TEXTS = ["Нет", "Нет", "Нет", "Не-а", "Мимо", "Нет", "Почти!", "Нет", "Хм…"];
+  const TEASES = ["", "", "Кнопка «Нет» сегодня не работает", "", "Ой, мимо", "", "Она у нас стеснительная", "", "Может, просто «Да»?"];
   let dodges = 0, lastDodge = 0, pos = null, home = null, spacer = null;
   const clamp = (v, a, b) => Math.min(Math.max(v, a), b);
 
@@ -643,36 +701,36 @@
     return out;
   }
   function placeText() {
-    if (cfg.placeMode === "pickup") return cfg.pickupText || "Я заберу вас 🚗";
-    if (cfg.placeMode === "surprise") return "Это сюрприз 🤫";
+    if (cfg.placeMode === "pickup") return cfg.pickupText || "Я заберу вас";
+    if (cfg.placeMode === "surprise") return "Это сюрприз";
     return [cfg.place, cfg.address].filter(Boolean).join(", ");
   }
 
   function buildInvite() {
     const rows = [];
-    if (cfg.date) rows.push(["📅", "Дата", esc(dateText())]);
+    if (cfg.date) rows.push([ICONS.date, "Дата", esc(dateText())]);
 
     if (cfg.timeMode === "her") {
       const chips = timeSlots().map(t => `<button class="chip${t === chosenTime ? " active" : ""}" data-t="${t}">${t}</button>`).join("");
-      rows.push(["⏰", "Время", `Выберите, во сколько вам удобно:<div class="chips" id="chips">${chips}</div>
+      rows.push([ICONS.time, "Время", `Выберите, во сколько вам удобно:<div class="chips" id="chips">${chips}</div>
         <label class="other">или своё время <input type="time" id="customTime" value="${esc(chosenTime)}"></label>`]);
     } else if (cfg.time) {
-      rows.push(["⏰", "Время", esc(cfg.time)]);
+      rows.push([ICONS.time, "Время", esc(cfg.time)]);
     }
 
     if (cfg.placeMode === "pickup") {
-      rows.push(["🚗", "Место", esc(cfg.pickupText || "Я заберу вас 🚗")]);
+      rows.push([ICONS.car, "Место", esc(cfg.pickupText || "Я заберу вас")]);
     } else if (cfg.placeMode === "surprise") {
-      rows.push(["📍", "Место", "Это сюрприз 🤫"]);
+      rows.push([ICONS.star, "Место", "Это сюрприз"]);
     } else if (cfg.place || cfg.address) {
       const map = cfg.mapUrl || (cfg.address ? "https://yandex.ru/maps/?text=" + encodeURIComponent(cfg.address) : "");
       let v = esc(cfg.place || "");
       if (cfg.address) v += `${v ? "<br>" : ""}<a href="${esc(map)}" target="_blank" rel="noopener">${esc(cfg.address)}</a>`;
       else if (map) v += ` · <a href="${esc(map)}" target="_blank" rel="noopener">на карте</a>`;
-      rows.push(["📍", "Место", v]);
+      rows.push([ICONS.pin, "Место", v]);
     }
-    if (cfg.dress) rows.push(["👗", "Дресс-код", esc(cfg.dress)]);
-    if (cfg.note) rows.push(["💬", "P.S.", esc(cfg.note).replace(/\n/g, "<br>")]);
+    if (cfg.dress) rows.push([ICONS.dress, "Дресс-код", esc(cfg.dress)]);
+    if (cfg.note) rows.push([ICONS.note, "P.S.", esc(cfg.note).replace(/\n/g, "<br>")]);
     $("rows").innerHTML = rows.map(([i, l, v]) =>
       `<div class="row"><div class="ico">${i}</div><div><div class="lbl">${l}</div><div class="val">${v}</div></div></div>`).join("");
 
@@ -713,13 +771,13 @@
     let html = "";
     if (tg) html += `<a class="tg" data-kind="tg" target="_blank" rel="noopener">Ответить в Telegram</a>`;
     if (wa) html += `<a class="wa" data-kind="wa" target="_blank" rel="noopener">Ответить в WhatsApp</a>`;
-    if (!html && cfg.timeMode === "her") html = `<button data-kind="share">Отправить ответ 💌</button>`;
+    if (!html && cfg.timeMode === "her") html = `<button data-kind="share">Отправить ответ</button>`;
     box.innerHTML = html;
     box.addEventListener("click", async e => {
       const el = e.target.closest("[data-kind]"); if (!el) return;
       if (cfg.timeMode === "her" && !chosenTime) {
         e.preventDefault();
-        $("toast").textContent = "Сначала выберите время ⏰";
+        $("toast").textContent = "Сначала выберите время";
         const c = $("chips"); c.classList.remove("shake"); void c.offsetWidth; c.classList.add("shake");
         return;
       }
@@ -761,7 +819,7 @@
     const el = $("countdown");
     if (!d) { el.innerHTML = ""; return; }
     let ms = d - new Date();
-    if (ms <= 0) { el.innerHTML = "<b>Уже сегодня! 🌹</b>"; return; }
+    if (ms <= 0) { el.innerHTML = "<b>Уже сегодня!</b>"; return; }
     const days = Math.floor(ms / 864e5); ms %= 864e5;
     const h = Math.floor(ms / 36e5); ms %= 36e5;
     const m = Math.floor(ms / 6e4); const s = Math.floor(ms % 6e4 / 1e3);
@@ -769,24 +827,36 @@
   }
 
   /* ---------- falling flowers ---------- */
-  const BITS = ["🌹", "🌸", "💐", "🌷", "💖", "✨", "🌺", "💕"];
-  function rain(n) {
+  // kind -> [images, class, width range, fall seconds, sway px, tilt deg]
+  const KINDS = {
+    petal:   [PETAL_IMGS, "flip",    [12, 22], [6, 10], [25, 60], 35],
+    heart:   [HEART_IMGS, "soft",    [16, 30], [5, 8],  [15, 40], 18],
+    rose:    [ROSE_IMGS,  "",        [22, 36], [5, 8],  [10, 30], 12],
+    sparkle: [SPARK_IMGS, "twinkle", [10, 18], [4, 7],  [10, 25], 10],
+  };
+  const MIX = ["petal", "petal", "petal", "petal", "heart", "heart", "heart", "rose", "rose", "sparkle"];
+  function rain(n, only) {
     for (let i = 0; i < n; i++) {
-      const s = document.createElement("div");
-      s.className = "fall";
-      s.textContent = pick(BITS);
-      s.style.left = rnd(0, 100) + "vw";
-      s.style.fontSize = rnd(16, 38) + "px";
-      s.style.animationDuration = rnd(3.5, 7) + "s";
-      s.style.animationDelay = rnd(0, 2.5) + "s";
-      s.style.setProperty("--dx", rnd(-120, 120) + "px");
-      s.style.setProperty("--r", rnd(-540, 540) + "deg");
-      document.body.appendChild(s);
-      s.addEventListener("animationend", () => s.remove());
+      const [imgs, cls, w, dur, amp, tilt] = KINDS[only || pick(MIX)];
+      const f = document.createElement("div");
+      f.className = "fall " + cls;
+      f.style.left = rnd(-2, 98) + "vw";
+      f.style.setProperty("--dur", rnd(...dur) + "s");
+      f.style.setProperty("--delay", rnd(0, 3) + "s");
+      f.style.setProperty("--amp", rnd(...amp) + "px");
+      f.style.setProperty("--tilt", rnd(tilt * 0.5, tilt) + "deg");
+      f.style.setProperty("--swd", rnd(1.6, 3.2) + "s");
+      f.style.setProperty("--swdl", -rnd(0, 3) + "s");
+      f.style.setProperty("--w", rnd(...w) + "px");
+      f.style.setProperty("--spd", rnd(2.5, 6) + "s");
+      f.style.setProperty("--ax", rnd(0.2, 1).toFixed(2));
+      f.innerHTML = `<div class="sw"><img src="${pick(imgs)}" alt=""></div>`;
+      document.body.appendChild(f);
+      f.addEventListener("animationend", e => { if (e.target === f) f.remove(); });
     }
   }
-  // a few petals on the question screen
-  setInterval(() => { if ($("ask").classList.contains("show")) rain(1); }, 1100);
+  // a few petals drifting on the question screen
+  setInterval(() => { if ($("ask").classList.contains("show")) rain(1, "petal"); }, 1300);
 })();
 </script>
 </body>
